@@ -18,7 +18,7 @@ router.post("/register", (req, res) => {
   const { name, email, password } = req.body;
 
   if (!email || !name || !password)
-    return res.status(400).send({ msg: "Enter All Fields" });
+    return res.json({ fail: "Enter All Fields" });
 
   const saltRounds = 10;
 
@@ -34,9 +34,10 @@ router.post("/register", (req, res) => {
         },
       ];
 
-      csvWriter
-        .writeRecords(user)
-        .then(() => console.log("The CSV file was written successfully"));
+      csvWriter.writeRecords(user).then(() => {
+        console.log("The CSV file was written successfully");
+        res.status(200).json({ success: "Registred Succesfuly" });
+      });
     });
   });
 });
@@ -44,34 +45,41 @@ router.post("/register", (req, res) => {
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  const usersCSV = [];
-  let backEndUser;
-  let user;
+  if (!email || !password) return res.json({ msg: "Enter All Fields" });
+
+  // console.log(email, password);
+
+  const results = [];
+
   fs.createReadStream("data.csv")
     .pipe(csv())
     .on("data", (data) => {
-      usersCSV.push(data);
-      backEndUser = usersCSV.filter((user) => user.Email === email);
-
-      if (backEndUser.length > 0) {
-        user = backEndUser[0];
-      }
-
-      console.log(user);
-
-      if (!user === undefined) {
-        bcrypt.compare(password, user.Password, function (err, result) {
-          if (err) throw err;
-
-          if (!result == true || user.Email === email) {
-            return res.send("Wrong Credentials");
-          }
-        });
-      }
+      results.push(data);
     })
     .on("end", () => {
-      res.status(200).send({ msg: "Loged In", user: user });
-      console.log(backEndUser);
+      let filteredUser = results.filter(
+        (email) => email.Email === req.body.email
+      );
+
+      if (filteredUser === undefined || filteredUser.length == 0) {
+        return res.json({ error: "Email Not Found" });
+      } else {
+        //
+        bcrypt.compare(password, filteredUser[0].Password, function (
+          err,
+          result
+        ) {
+          if (err) throw err;
+
+          if (!result === true) {
+            return res.json({ error: "Wrong password" });
+          } else {
+            let user = filteredUser[0];
+            res.status(200).json({ user });
+          }
+        });
+        //
+      }
     });
 });
 
