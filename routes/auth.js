@@ -32,7 +32,7 @@ router.post("/register", (req, res) => {
         (email) => email.Email === req.body.email
       );
 
-      if (filteredUser !== undefined || filteredUser.length != 0) {
+      if (filteredUser.length > 0) {
         return res.status(400).json({ fail: "Email Already Exists" });
       } else {
         const saltRounds = 10;
