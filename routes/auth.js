@@ -18,36 +18,52 @@ router.post("/register", (req, res) => {
   const { name, email, password } = req.body;
 
   if (!email || !name || !password)
-    return res.json({ fail: "Enter All Fields" });
+    return res.status(400).json({ fail: "Enter All Fields" });
 
-  const saltRounds = 10;
+  const results = [];
 
-  bcrypt.genSalt(saltRounds, function (err, salt) {
-    bcrypt.hash(password, salt, function (err, hash) {
-      if (err) throw err;
+  fs.createReadStream("data.csv")
+    .pipe(csv())
+    .on("data", (data) => {
+      results.push(data);
+    })
+    .on("end", () => {
+      let filteredUser = results.filter(
+        (email) => email.Email === req.body.email
+      );
 
-      const user = [
-        {
-          name: req.body.name,
-          email: req.body.email,
-          password: hash,
-        },
-      ];
+      if (filteredUser !== undefined || filteredUser.length != 0) {
+        return res.status(400).json({ fail: "Email Already Exists" });
+      } else {
+        const saltRounds = 10;
 
-      csvWriter.writeRecords(user).then(() => {
-        console.log("The CSV file was written successfully");
-        res.status(200).json({ success: "Registred Succesfuly" });
-      });
+        bcrypt.genSalt(saltRounds, function (err, salt) {
+          bcrypt.hash(password, salt, function (err, hash) {
+            if (err) throw err;
+
+            const user = [
+              {
+                name: req.body.name,
+                email: req.body.email,
+                password: hash,
+              },
+            ];
+
+            csvWriter.writeRecords(user).then(() => {
+              console.log("The CSV file was written successfully");
+              res.status(200).json({ success: "Registred Succesfuly" });
+            });
+          });
+        });
+      }
     });
-  });
 });
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) return res.json({ msg: "Enter All Fields" });
-
-  // console.log(email, password);
+  if (!email || !password)
+    return res.status(400).json({ msg: "Enter All Fields" });
 
   const results = [];
 
@@ -62,7 +78,7 @@ router.post("/login", (req, res) => {
       );
 
       if (filteredUser === undefined || filteredUser.length == 0) {
-        return res.json({ error: "Email Not Found" });
+        return res.status(400).json({ error: "Email Not Found" });
       } else {
         //
         bcrypt.compare(password, filteredUser[0].Password, function (
@@ -72,7 +88,7 @@ router.post("/login", (req, res) => {
           if (err) throw err;
 
           if (!result === true) {
-            return res.json({ error: "Wrong password" });
+            return res.status(400).json({ error: "Wrong password" });
           } else {
             let user = filteredUser[0];
             res.status(200).json({ user });
