@@ -51,7 +51,10 @@ router.post("/register", (req, res) => {
 
             csvWriter.writeRecords(user).then(() => {
               console.log("The CSV file was written successfully");
-              res.status(200).json({ success: "Registred Succesfuly" });
+              res.status(200).json({
+                token: "dummy-token",
+                user: user[0],
+              });
             });
           });
         });
@@ -91,7 +94,7 @@ router.post("/login", (req, res) => {
             return res.status(400).json({ error: "Wrong password" });
           } else {
             let user = filteredUser[0];
-            res.status(200).json({ user });
+            res.status(200).json({ user, token: "dummy-token" });
           }
         });
         //
